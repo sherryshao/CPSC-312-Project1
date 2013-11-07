@@ -2,134 +2,85 @@
 -- Project #1
 -- Eric Chu (73265092) & Sherry Shao (60135084)
 
-oska_x1y2 :: [String] -> Char -> Integer -> [String]
-oska_x1y2 board us depth
-	| us == 'w'		= generateBoard board us depth
-	| otherwise		= generateBoard (flipBoard board) us depth
+oska_x1y2 :: [String] -> Char -> Int -> [String]
+oska_x1y2 board player depth = generateNewBoard board player depth
 
-generateBoard :: [String] -> Char -> Integer -> [String]
-generateBoard board us depth = generateBestBoard (generateNewStates board us depth)
+-- generateNewBoard : Set up initial state of paths and min max state
 
-generateBestBoard :: [([String], Integer)] -> [String]
-generateBestBoard weightedBoard = generateBestBoard_tr weightedBoard [] 0
+generateNewBoard :: [String] -> Char -> Int -> [String]
+generateNewBoard board player depth = generateNewBoardWithDepth [[(board, 0)]] player depth True
 
-generateBestBoard_tr :: [([String], Integer)] -> [String] -> Integer -> [String]
-generateBestBoard_tr weightedBoard bestBoard lastWeight
-	| null weightedBoard		= bestBoard
-	| currWeight >= lastWeight	= 
-		generateBestBoard_tr (tail weightedBoard) currBoard currWeight
+-- generateNewBoardWithDepth : Recursively generates a set of new paths for given depth
+
+generateNewBoardWithDepth :: [[([String], Int)]] -> Char -> Int -> Bool -> [String]
+generateNewBoardWithDepth currPaths player depth isMax
+	| depth == 0 	= generateEvaluatedBoard currPaths isMax
+	| otherwise		= generateNewBoardWithDepth (generateNewLevel currPaths player) newPlayer (depth-1) (not isMax)
+	where
+		newPlayer = if (player == 'w') then 'b' else 'w'
+
+-- generateNewLevel : Returns a new set of paths that includes a new level in the tree
+
+generateNewLevel :: [[([String], Int)]] -> Char -> [[([String], Int)]]
+generateNewLevel currPaths player = generateNewLevel_tr currPaths player []
+
+generateNewLevel_tr :: [[([String], Int)]] -> Char -> [[([String], Int)]] -> [[([String], Int)]]
+generateNewLevel_tr currPaths player newPaths
+	| null currPaths	= newPaths
+	| otherwise			= 
+		generateNewLevel_tr (tail currPaths) player ((generateNewPaths currPath (generateNewStates currBoard player)) ++ newPaths)
+	where
+		currPath = (head currPaths)
+		currBoard = fst (head currPath)
+
+-- generateNewPaths : Attach new states to the head of the current path; return newly generated paths
+
+generateNewPaths :: [([String], Int)] -> [([String], Int)] -> [[([String], Int)]]
+generateNewPaths currPath newStates
+	| null newStates 	= []
+	| otherwise			= ((head newStates):currPath):(generateNewPaths currPath (tail newStates))
+
+-- Evaluation Functions
+
+-- generateEvaluatedBoard : Determines if we're looking for best or worst board
+
+generateEvaluatedBoard :: [[([String], Int)]] -> Bool -> [String]
+generateEvaluatedBoard paths isMax
+	| isMax  	= generateBestBoard (tail paths) currBoard currWeight
+	| otherwise	= generateWorstBoard (tail paths) currBoard currWeight
+	where
+		currBoard = fst (last (init (head paths)))
+		currWeight = snd (last (init (head paths)))
+
+-- generateBestBoard : Returns best board give a set of paths (max)
+
+generateBestBoard :: [[([String], Int)]] -> [String] -> Int -> [String]
+generateBestBoard paths bestBoard lastWeight
+	| null paths				= bestBoard
+	| currWeight > lastWeight	= 
+		generateBestBoard (tail paths) currBoard currWeight
 	| otherwise					=
-		generateBestBoard_tr (tail weightedBoard) bestBoard lastWeight
+		generateBestBoard (tail paths) bestBoard lastWeight
 	where
-		currBoard = fst (head weightedBoard)
-		currWeight = snd (head weightedBoard)
+		currBoard = fst (last (init (head paths)))
+		currWeight = snd (last (init (head paths)))
 
-generateNewStates :: [String] -> Char -> Integer -> [([String], Integer)]
-generateNewStates currBoard us depth = 
-	concat [generateLeftMove currBoard depth,
-			generateRightMove currBoard depth,
-			generateLeftJump currBoard depth,
-			generateRightJump currBoard depth]
+-- generateWorstBoard : Returns worst board give a set of paths (min)
 
-generateLeftMove currBoard us depth = 
-	columnizeBoard( generateNew columnizeBoard( currBoard ) us '-' depth )
-
-generateRightMove currBoard us depth = 
-	reverseBoard( columnizeBoard( generateNew columnizeBoard( reverseBoard currBoard ) us '-' depth ))
-
-generateLeftJump currBoard us depth = 
-	columnizeBoard( generateNew columnizeBoard( currBoard ) us (getOpponent us) depth )
-
-generateRightJump currBoard us depth = 
-	reverseBoard( columnizeBoard( generateNew columnizeBoard( reverseBoard currBoard ) us (getOpponent us) depth ))
-
--- generateNew : moves to the left by default
-generateNew :: [String] -> Char -> Char -> Integer -> [([String], Integer)]
-generateNew currBoard us adj depth = 
-	generateNew_tr currBoard us adj depth 0
-
-generateNew_tr :: [String] -> Char -> Char -> Integer -> Integer -> [([String], Integer)]
-generateNew_tr currBoard us adj depth posY
-	| posY >= (length currBoard) = []
-	| elem us currCol			 = 
-		generateNew_tr currBoard us adj depth (posY+1)
-	| otherwise					 =
-		(generateNewBoards currBoard us adj posY) ++
-		(generateNew_tr currBoard us adj depth (posY+1))
+generateWorstBoard :: [[([String], Int)]] -> [String] -> Int -> [String]
+generateWorstBoard paths worstBoard lastWeight
+	| null paths				= worstBoard
+	| currWeight < lastWeight	= 
+		generateWorstBoard (tail paths) currBoard currWeight
+	| otherwise					=
+		generateWorstBoard (tail paths) worstBoard lastWeight
 	where
-		currCol = colAtPos currBoard posY
+		currBoard = fst (last (init (head paths)))
+		currWeight = snd (last (init (head paths)))
 
--- generateNewColumn
+-- New State Generation Fuctions
 
-generateNewColumn :: String -> Integer -> Char -> Char -> String
-generateNewColumn currCol pos us adj
-	| pos + (length oldSegment) > length currCol	= currCol
-	| segmentEqual currCol pos oldSegment			=
-		(generateNewRow (replaceSegment currCol pos newSegment) (pos + 1) us)
-	| otherwise										= 
-		(generateNewRow currCol (pos + 1) us)
-	where 
-		oldSegment = us:adj:[]
-		newSegment = '-':us:[]
-
--- Helper Functions
-
--- getOpponent : Get opponent character given what we are
-
-getOpponent :: Char -> Char
-getOpponent us
-	| us == 'w'	= 'b'
-	| otherwise	= 'w'
-
--- colAtPos : Returns column at position on board
-
-colAtPos :: [String] -> Integer -> String
-colAtPos board posY
-	| posY == 0	= head board
-	| otherwise	= colAtPos (tail board) (posY-1)
-
--- replaceColAtPos : Returns new board / state after replacing one column
-
-replaceColAtPos :: [String] -> String -> Integer -> Integer -> [String]
-replaceColAtPos grid newCol pos start
-	| null grid 				 	= []
-	| pos == start					= 
-		newCol:(replaceColAtPos (tail grid) newCol pos (start+1))
-	| otherwise		 	 			= 
-		(head grid):(replaceColAtPos (tail grid) newCol pos (start+1))
-
--- segmentEqual : (snippet from lecture slides) check current column with segment to be replaced
-
-segmentEqual :: String -> Integer -> String -> Bool
-segmentEqual oldCol pos oldSegment = 
-   (oldSegment == take (length oldSegment) (drop pos oldCol))
-
--- replaceSegment : (snippet from lecture slides) replace segment in list
-
-replaceSegment :: String -> Integer -> String -> String
-replaceSegment oldCol pos segment
-   | pos == 0  = segment ++ drop (length segment) oldCol
-   | otherwise = 
-        (head oldCol):
-        (replaceSegment (tail oldCol) (pos - 1) segment)
-
--- flipBoard : change player side (our player is on the side of the first row)
-flipBoard :: [String] -> [String]
-flipBoard board = reverse (map reverse board)
-
--- reverseBoard : change diretion of movements (i.e. left vs right)
-reverseBoard :: [String] -> [String]
-reverseBoard board = map reverse board
-
--- columnizeBoard : standardize board to be able to move forward (deault towards the left)
-columnizeBoard :: [String] -> [String]
-columnizeBoard board = board
-
-
-
--- ERIC'S CODE STARTS HERE **** state generation working!
--- will add more comments
--- currently, calling generateNewStates given a board and player ('w' or 'b'), all states one step away from the current
+-- Currently, calling generateNewStates given a board and player ('w' or 'b'), all states one step away from the current
 -- state will be returned as a list. Score evaluation is current set to 0.
 -- also, implementation assumes that 'b' pawns move start at the bottom and move upward while 'w' pawns start at the top
 -- and move downward. 
