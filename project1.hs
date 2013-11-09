@@ -8,75 +8,55 @@ oska_x1y2 board player depth = generateNewBoard board player depth
 -- generateNewBoard : Set up initial state of paths and min max state
 
 generateNewBoard :: [String] -> Char -> Int -> [String]
-generateNewBoard board player depth = generateNewBoardWithDepth [[(board, 0)]] player depth True
+generateNewBoard board player depth 
+	| depth == 0	= board
+	| otherwise		= fst (generateNewBoardWithDepth player depth True (board, 0))
 
--- generateNewBoardWithDepth : Recursively generates a set of new paths for given depth
+-- generateNewBoardWithDepth : 
+-- 		Recursively pass up the min / max weight up the tree
+--		to compare until we reach the "next step" level
 
-generateNewBoardWithDepth :: [[([String], Int)]] -> Char -> Int -> Bool -> [String]
-generateNewBoardWithDepth currPaths player depth isMax
-	| depth == 0 	= generateEvaluatedBoard currPaths isMax
-	| otherwise		= generateNewBoardWithDepth (generateNewLevel currPaths player) newPlayer (depth-1) (not isMax)
+generateNewBoardWithDepth :: Char -> Int -> Bool -> ([String], Int) -> ([String], Int)
+generateNewBoardWithDepth player depth isMax board
+	| depth == 1 	= generateEvaluatedBoard newBoards isMax
+	| otherwise		= generateEvaluatedBoard (zip (map fst newBoards) (map snd newTuples)) isMax
 	where
 		newPlayer = if (player == 'w') then 'b' else 'w'
-
--- generateNewLevel : Returns a new set of paths that includes a new level in the tree
-
-generateNewLevel :: [[([String], Int)]] -> Char -> [[([String], Int)]]
-generateNewLevel currPaths player = generateNewLevel_tr currPaths player []
-
-generateNewLevel_tr :: [[([String], Int)]] -> Char -> [[([String], Int)]] -> [[([String], Int)]]
-generateNewLevel_tr currPaths player newPaths
-	| null currPaths	= newPaths
-	| otherwise			= 
-		generateNewLevel_tr (tail currPaths) player ((generateNewPaths currPath (generateNewStates currBoard player)) ++ newPaths)
-	where
-		currPath = (head currPaths)
-		currBoard = fst (head currPath)
-
--- generateNewPaths : Attach new states to the head of the current path; return newly generated paths
-
-generateNewPaths :: [([String], Int)] -> [([String], Int)] -> [[([String], Int)]]
-generateNewPaths currPath newStates
-	| null newStates 	= []
-	| otherwise			= ((head newStates):currPath):(generateNewPaths currPath (tail newStates))
+		newBoards = generateNewStates (fst board) player
+		newTuples = map (generateNewBoardWithDepth newPlayer (depth-1) isMax) newBoards
 
 -- Evaluation Functions
 
 -- generateEvaluatedBoard : Determines if we're looking for best or worst board
 
-generateEvaluatedBoard :: [[([String], Int)]] -> Bool -> [String]
-generateEvaluatedBoard paths isMax
-	| isMax  	= generateBestBoard (tail paths) currBoard currWeight
-	| otherwise	= generateWorstBoard (tail paths) currBoard currWeight
-	where
-		currBoard = fst (last (init (head paths)))
-		currWeight = snd (last (init (head paths)))
+generateEvaluatedBoard :: [([String], Int)] -> Bool -> ([String], Int)
+generateEvaluatedBoard boards isMax
+	| isMax  	= generateBestBoard boards (head boards)
+	| otherwise	= generateWorstBoard boards (head boards)
 
--- generateBestBoard : Returns best board give a set of paths (max)
+-- generateBestBoard : Returns best board give a set of boards (max)
 
-generateBestBoard :: [[([String], Int)]] -> [String] -> Int -> [String]
-generateBestBoard paths bestBoard lastWeight
-	| null paths				= bestBoard
-	| currWeight > lastWeight	= 
-		generateBestBoard (tail paths) currBoard currWeight
+generateBestBoard :: [([String], Int)] -> ([String], Int) -> ([String], Int)
+generateBestBoard boards bestBoard
+	| null boards				= bestBoard
+	| (snd currBoard) > (snd bestBoard)	= 
+		generateBestBoard (tail boards) currBoard
 	| otherwise					=
-		generateBestBoard (tail paths) bestBoard lastWeight
+		generateBestBoard (tail boards) bestBoard
 	where
-		currBoard = fst (last (init (head paths)))
-		currWeight = snd (last (init (head paths)))
+		currBoard = head boards
 
--- generateWorstBoard : Returns worst board give a set of paths (min)
+-- generateWorstBoard : Returns worst board give a set of boards (min)
 
-generateWorstBoard :: [[([String], Int)]] -> [String] -> Int -> [String]
-generateWorstBoard paths worstBoard lastWeight
-	| null paths				= worstBoard
-	| currWeight < lastWeight	= 
-		generateWorstBoard (tail paths) currBoard currWeight
+generateWorstBoard :: [([String], Int)] -> ([String], Int) -> ([String], Int)
+generateWorstBoard boards worstBoard
+	| null boards				= worstBoard
+	| (snd currBoard) < (snd worstBoard)	= 
+		generateWorstBoard (tail boards) currBoard
 	| otherwise					=
-		generateWorstBoard (tail paths) worstBoard lastWeight
+		generateWorstBoard (tail boards) worstBoard
 	where
-		currBoard = fst (last (init (head paths)))
-		currWeight = snd (last (init (head paths)))
+		currBoard = head boards
 
 -- New State Generation Fuctions
 
