@@ -68,24 +68,43 @@ generateWorstBoard boards worstBoard
 -- and move downward. 
 
 generateNewStates :: [String] -> Char -> [([String], Int)]
-generateNewStates currBoard player	
-	| player == 'w'		= generateNewStates' currBoard player (getAllPawns currBoard player)
-	| player == 'b'		= reverseNewStates (generateNewStates' (reverse currBoard) player (getAllPawns (reverse currBoard) player))
+generateNewStates currBoard player 	
+	| player == 'w'		= assignScores (generateNewStatesNoScore currBoard player (getAllPawns currBoard player)) player (length (getAllPawns currBoard player))
+	| player == 'b'		= assignScores (generateNewStatesNoScore (reverse currBoard) player (getAllPawns (reverse currBoard player))) player (length (getAllPawns (reverse currBoard player) player))
 	| otherwise			= []
 
-reverseNewStates :: [([String], Int)] -> [([String], Int)]
+assignScores :: [[String]] -> Char -> Int -> [([String], Int)]
+assignScores newStates player numOfPawns
+	| null newStates 	= []
+	| otherwise 		= assignScore (head newStates) player numOfPawns : assignScores (tail newStates)
+
+assignScore :: [String] -> Char ->  Int -> ([String], Int)
+assignScore state player numOfPawns 	= (state, (assignScore' state player 0 numOfPawns))
+
+assignScore' :: [String] -> Char -> Int -> Int
+assignScore' state player level numOfPawns
+	| null state 	= 0
+	| otherwise		= 0
+
+generateNewStatesNoScore :: [String] -> Char -> [(Int, Int)] -> [[String]]
+generateNewStatesNoScore currBoard player pawnlocs
+	| player == 'w'		= generateNewStates' currBoard player pawnlocs
+	| player == 'b'		= reverseNewStates (generateNewStates' currBoard player pawnlocs)
+	| otherwise			= []
+
+reverseNewStates :: [[String]] -> [[String]]
 reverseNewStates states
 	| null states 	= []
-	| otherwise 	= (reverse (fst (head states)), snd (head states)) : reverseNewStates (tail states)
+	| otherwise 	= reverse (head states): reverseNewStates (tail states)
 
-generateNewStates' :: [String] -> Char -> [(Int, Int)] -> [([String], Int)]
+generateNewStates' :: [String] -> Char -> [(Int, Int)] -> [[String]]
 generateNewStates' currBoard player pawnlocs
 	| null pawnlocs		= []
 	| otherwise			= generateNewStatesPawn currBoard player (head pawnlocs) ++ generateNewStates' currBoard player (tail pawnlocs)
 
-generateNewStatesPawn :: [String] -> Char -> (Int, Int) -> [([String], Int)]
+generateNewStatesPawn :: [String] -> Char -> (Int, Int) -> [[String]]
 generateNewStatesPawn currBoard player pawnloc 	
-	= filter (\x -> not (null (fst x))) ((generateNewStatePawnMvLeft currBoard player pawnloc) : (generateNewStatePawnMvRight currBoard player pawnloc) : 
+	= filter (\x -> not (null x)) ((generateNewStatePawnMvLeft currBoard player pawnloc) : (generateNewStatePawnMvRight currBoard player pawnloc) : 
 											(generateNewStatePawnJumpLeft currBoard player pawnloc) : (generateNewStatePawnJumpRight currBoard player pawnloc) : [])
 
 generateNewStatePawnMvLeftDefault :: [String] -> Char -> (Int, Int) -> Bool -> [String]
@@ -96,21 +115,21 @@ generateNewStatePawnMvLeftDefault currBoard player pawnloc isJump
 						player ((fst pawnloc + 1), snd newStr2) False
 	where newStr2 = generateStr2MvLeft (currBoard !! (fst pawnloc)) (currBoard !! (fst pawnloc + 1)) (snd pawnloc) isJump
 
-generateNewStatePawnMvLeft :: [String] -> Char -> (Int, Int) -> ([String], Int)
+generateNewStatePawnMvLeft :: [String] -> Char -> (Int, Int) -> [String]
 generateNewStatePawnMvLeft currBoard player pawnloc	
-	= ((generateNewStatePawnMvLeftDefault currBoard player pawnloc False), 0)
+	= generateNewStatePawnMvLeftDefault currBoard player pawnloc False
 
-generateNewStatePawnMvRight :: [String] -> Char -> (Int, Int) -> ([String], Int)
+generateNewStatePawnMvRight :: [String] -> Char -> (Int, Int) -> [String]
 generateNewStatePawnMvRight currBoard player pawnloc	
-	= (reverseBoard (generateNewStatePawnMvLeftDefault (reverseBoard currBoard) player (fst pawnloc, (length (currBoard !! (fst pawnloc)) - (snd pawnloc + 1))) False), 0)
+	= reverseBoard (generateNewStatePawnMvLeftDefault (reverseBoard currBoard) player (fst pawnloc, (length (currBoard !! (fst pawnloc)) - (snd pawnloc + 1))) False)
 
-generateNewStatePawnJumpLeft :: [String] -> Char -> (Int, Int) -> ([String], Int)
+generateNewStatePawnJumpLeft :: [String] -> Char -> (Int, Int) -> [String]
 generateNewStatePawnJumpLeft currBoard player pawnloc
-	= ((generateNewStatePawnMvLeftDefault currBoard player pawnloc True), 0)
+	= generateNewStatePawnMvLeftDefault currBoard player pawnloc True
 
-generateNewStatePawnJumpRight :: [String] -> Char -> (Int, Int) -> ([String], Int)
+generateNewStatePawnJumpRight :: [String] -> Char -> (Int, Int) -> [String]
 generateNewStatePawnJumpRight currBoard player pawnloc
-	= (reverseBoard (generateNewStatePawnMvLeftDefault (reverseBoard currBoard) player (fst pawnloc, (length (currBoard !! (fst pawnloc)) - (snd pawnloc + 1))) True), 0)
+	= reverseBoard (generateNewStatePawnMvLeftDefault (reverseBoard currBoard) player (fst pawnloc, (length (currBoard !! (fst pawnloc)) - (snd pawnloc + 1))) True)
 
 generateStr1 :: String -> Int -> String
 generateStr1 str1 index	= replaceListElem str1 index '-'
