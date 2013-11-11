@@ -69,22 +69,31 @@ generateWorstBoard boards worstBoard
 
 generateNewStates :: [String] -> Char -> [([String], Int)]
 generateNewStates currBoard player 	
-	| player == 'w'		= assignScores (generateNewStatesNoScore currBoard player (getAllPawns currBoard player)) player (length (getAllPawns currBoard player))
-	| player == 'b'		= assignScores (generateNewStatesNoScore (reverse currBoard) player (getAllPawns (reverse currBoard player))) player (length (getAllPawns (reverse currBoard player) player))
+	| player == 'w'		= assignScores (generateNewStatesNoScore currBoard player (getAllPawns currBoard player)) player (fromIntegral (length (getAllPawns currBoard player)))
+	| player == 'b'		= assignScores (generateNewStatesNoScore (reverse currBoard) player (getAllPawns (reverse currBoard) player)) player (fromIntegral (length (getAllPawns (reverse currBoard) player)))
 	| otherwise			= []
 
-assignScores :: [[String]] -> Char -> Int -> [([String], Int)]
+assignScores :: [[String]] -> Char -> Float -> [([String], Int)]
 assignScores newStates player numOfPawns
 	| null newStates 	= []
-	| otherwise 		= assignScore (head newStates) player numOfPawns : assignScores (tail newStates)
+	| otherwise 		= assignScore (head newStates) player numOfPawns : assignScores (tail newStates) player numOfPawns
 
-assignScore :: [String] -> Char ->  Int -> ([String], Int)
-assignScore state player numOfPawns 	= (state, (assignScore' state player 0 numOfPawns))
+assignScore :: [String] -> Char ->  Float -> ([String], Int)
+assignScore state player numOfPawns 	
+	| player == 'w'		= (state, ((assignScore' state 'w' 0 numOfPawns (fromIntegral (length (state !! 0)))) - (assignScore' (reverse state) 'b' 0 numOfPawns (fromIntegral (length (state !! 0))))))
+	| otherwise			= (state, ((assignScore' (reverse state) 'b' 0 numOfPawns (fromIntegral (length (state !! 0)))) - (assignScore' state 'w' 0 numOfPawns (fromIntegral (length (state !! 0))))))
 
-assignScore' :: [String] -> Char -> Int -> Int
-assignScore' state player level numOfPawns
+assignScore' :: [String] -> Char -> Int -> Float -> Float -> Int
+assignScore' state player level numOfPawns totalPawns
 	| null state 	= 0
-	| otherwise		= 0
+	| otherwise		= (assignScoreRow (head state) player level numOfPawns totalPawns) + (assignScore' (tail state) player (level + 1) numOfPawns totalPawns)
+
+assignScoreRow :: String -> Char -> Int -> Float -> Float -> Int
+assignScoreRow row player level numOfPawns totalPawns
+	| null row 					= 0
+	| (head row) ==  player 	= (10 * fromIntegral level) + ((floor ((((0.8 * 10 * totalPawns) / numOfPawns) / ((2 * totalPawns) - 4)) * fromIntegral level)) * fromIntegral (round totalPawns - round numOfPawns)) 
+									+ (assignScoreRow (tail row) player level numOfPawns totalPawns)
+	| otherwise					= assignScoreRow (tail row) player level numOfPawns totalPawns
 
 generateNewStatesNoScore :: [String] -> Char -> [(Int, Int)] -> [[String]]
 generateNewStatesNoScore currBoard player pawnlocs
@@ -186,6 +195,11 @@ getAllPawnsRow' row player rowNum colNum
 
 reverseBoard :: [String] -> [String]
 reverseBoard board = map reverse board
+
+getOpponent :: Char -> Char
+getOpponent player
+	| player == 'w' 	= 'b'
+	| otherwise			= 'w'
 
 
 
