@@ -9,10 +9,10 @@ oska_x1y2 board player depth = generateNewBoard board player depth
 
 generateNewBoard :: [String] -> Char -> Int -> [String]
 generateNewBoard board player depth 
-	| depth == 0	= board
-	| otherwise		= fst (generateNewBoardWithDepth player depth isMax (board, 0))
+	| depth == 0			= board
+	| otherwise				= fst (generateNewBoardWithDepth player depth isMax (board, 0))
 	where
-		isMax = if ((mod depth 2) == 0) then False else True
+		isMax 		= if ((mod depth 2) == 0) then False else True
 
 -- generateNewBoardWithDepth : 
 -- 		Recursively pass up the min / max weight up the tree
@@ -20,8 +20,9 @@ generateNewBoard board player depth
 
 generateNewBoardWithDepth :: Char -> Int -> Bool -> ([String], Int) -> ([String], Int)
 generateNewBoardWithDepth player depth isMax board
-	| depth == 1 	= generateEvaluatedBoard newBoards isMax
-	| otherwise		= generateEvaluatedBoard (zip (map fst newBoards) (map snd newTuples)) isMax
+	| null newBoards	= board
+	| depth == 1 		= generateEvaluatedBoard newBoards isMax
+	| otherwise			= generateEvaluatedBoard (zip (map fst newBoards) (map snd newTuples)) isMax
 	where
 		newPlayer = if (player == 'w') then 'b' else 'w'
 		newBoards = generateNewStates (fst board) player
