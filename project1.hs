@@ -6,6 +6,7 @@ oska_x1y2 :: [String] -> Char -> Int -> [String]
 oska_x1y2 board player depth = generateNewBoard board player depth
 
 -- generateNewBoard : Set up initial state of paths and min max state
+--		Star
 
 generateNewBoard :: [String] -> Char -> Int -> [String]
 generateNewBoard board player depth 
@@ -13,8 +14,9 @@ generateNewBoard board player depth
 	| otherwise				= fst (generateNewBoardWithDepth player depth True (board, 0))
 
 -- generateNewBoardWithDepth : i.e. the minimax function
--- 		Recursively pass up the min / max weight up the tree
---		to compare until we reach the "next step" level
+-- 		Pass board up if it does not have new boards to generate.
+--		At each level, get the best/worst board dependent on isMax.
+--		When depth is reached pass up heuristics.
 
 generateNewBoardWithDepth :: Char -> Int -> Bool -> ([String], Int) -> ([String], Int)
 generateNewBoardWithDepth player depth isMax board
