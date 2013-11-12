@@ -2,8 +2,8 @@
 -- Project #1
 -- Eric Chu (73265092) & Sherry Shao (60135084)
 
-oska_x1y2 :: [String] -> Char -> Int -> [String]
-oska_x1y2 board player depth = generateNewBoard board player depth
+oska_k3s7 :: [String] -> Char -> Int -> [String]
+oska_k3s7 board player depth = generateNewBoard board player depth
 
 -- generateNewBoard : Set up initial state of paths and min max state
 --		Star
