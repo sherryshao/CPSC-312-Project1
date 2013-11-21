@@ -3,7 +3,7 @@ Oska Move Generator
 
 Oska playing program using minimax search with heuristics.
 
-Usaage
+Usage
 -----------------
 ###Arguments###
 > oska_x1y2 board player depth
